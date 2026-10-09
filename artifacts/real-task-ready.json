@@ -1,0 +1,60 @@
+{
+  "task_id": 2,
+  "url": "http://localhost:8080/tasks/2",
+  "name": "nuScenes-mini-CenterPoint-ui-3455407c7c41b0d4",
+  "dimension": "3d",
+  "frames": 20,
+  "labels": [
+    "car",
+    "truck",
+    "construction_vehicle",
+    "bus",
+    "trailer",
+    "barrier",
+    "motorcycle",
+    "bicycle",
+    "pedestrian",
+    "traffic_cone"
+  ],
+  "shapes": 0,
+  "tracks": 0,
+  "tags": 0,
+  "original_pcd_sha256_matches": true,
+  "real_inference": false,
+  "jobs": [
+    {
+      "url": "http://localhost:8080/api/jobs/2",
+      "id": 2,
+      "task_id": 2,
+      "project_id": null,
+      "assignee": null,
+      "guide_id": null,
+      "dimension": "3d",
+      "bug_tracker": null,
+      "status": "annotation",
+      "stage": "annotation",
+      "state": "new",
+      "mode": "annotation",
+      "frame_count": 20,
+      "start_frame": 0,
+      "stop_frame": 19,
+      "data_chunk_size": 72,
+      "data_compressed_chunk_type": "imageset",
+      "data_original_chunk_type": "imageset",
+      "created_date": "2026-10-08T04:48:38.295339Z",
+      "updated_date": "2026-10-08T04:48:38.295498Z",
+      "issues": {
+        "url": "http://localhost:8080/api/issues?job_id=2",
+        "count": 0
+      },
+      "labels": {
+        "url": "http://localhost:8080/api/labels?job_id=2"
+      },
+      "type": "annotation",
+      "organization": null,
+      "target_storage": null,
+      "source_storage": null,
+      "assignee_updated_date": null
+    }
+  ]
+}

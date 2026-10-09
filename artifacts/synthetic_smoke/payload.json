@@ -1,0 +1,55 @@
+{
+  "source": "synthetic_only",
+  "placeholder_ids": true,
+  "shape": {
+    "type": "cuboid",
+    "frame": 0,
+    "label_id": -1,
+    "points": [
+      8,
+      2,
+      1,
+      -0.0,
+      0.0,
+      0.7,
+      4.6,
+      1.7,
+      1.5,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation": 0,
+    "occluded": false,
+    "outside": false,
+    "source": "auto",
+    "group": 0,
+    "z_order": 0,
+    "attributes": [
+      {
+        "spec_id": -1,
+        "value": "synthetic:0"
+      },
+      {
+        "spec_id": -2,
+        "value": "0.8"
+      },
+      {
+        "spec_id": -3,
+        "value": "synthetic_geometry_fixture"
+      },
+      {
+        "spec_id": -4,
+        "value": "none"
+      },
+      {
+        "spec_id": -5,
+        "value": "synthetic"
+      }
+    ]
+  }
+}

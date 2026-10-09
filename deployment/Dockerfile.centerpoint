@@ -1,0 +1,30 @@
+FROM nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04
+ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 \
+    PIP_DEFAULT_TIMEOUT=120 PIP_RETRIES=10 PIP_PROGRESS_BAR=off
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 python3-pip python3.10-dev build-essential git ca-certificates \
+    libgl1 libglib2.0-0 libsm6 libxext6 libfreetype6-dev libpng-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s /usr/bin/python3.10 /usr/local/bin/python
+WORKDIR /opt/prelabel
+ENV PIP_RESUME_RETRIES=20
+COPY requirements-core.txt requirements-inference.txt pyproject.toml ./
+# Keep completed CUDA/package downloads when a later dependency times out.
+RUN --mount=type=cache,id=prelabel-pip,target=/root/.cache/pip \
+    python -m pip install pip==26.2.1 setuptools==75.8.2 wheel==0.45.1
+COPY deployment/runtime_wheels.py /opt/prelabel/runtime_wheels.py
+RUN --mount=type=cache,id=prelabel-pip,target=/root/.cache/pip \
+    --mount=type=bind,from=runtime_wheels,target=/opt/wheelhouse \
+    python /opt/prelabel/runtime_wheels.py --verify /opt/wheelhouse \
+    && python -m pip install \
+        /opt/wheelhouse/torch-1.13.1+cu117-cp310-cp310-linux_x86_64.whl \
+        /opt/wheelhouse/torchvision-0.14.1+cu117-cp310-cp310-linux_x86_64.whl
+RUN --mount=type=cache,id=prelabel-pip,target=/root/.cache/pip \
+    --mount=type=bind,from=runtime_wheels,target=/opt/wheelhouse \
+    python -m pip install /opt/wheelhouse/mmcv-2.1.0-cp310-cp310-manylinux1_x86_64.whl
+RUN --mount=type=cache,id=prelabel-pip,target=/root/.cache/pip \
+    python -m pip install -r requirements-inference.txt
+COPY src ./src
+RUN python -m pip install --no-deps . && python -m pip check
+WORKDIR /workspace
+CMD ["python", "-m", "prelabel", "doctor"]

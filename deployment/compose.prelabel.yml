@@ -1,0 +1,91 @@
+# Overlay on the upstream CVAT v2.20.0 compose and serverless compose.
+# Relative paths resolve against .local/upstream/cvat-2.20.0.
+services:
+  nuclio:
+    environment:
+      NUCLIO_DASHBOARD_NO_PULL_BASE_IMAGES: "true"
+    volumes:
+      - ../../../:/workspace
+  traefik:
+    # Docker 29 requires API negotiation absent from the upstream v2.10 image.
+    image: traefik:v2.11.58
+  # Analytics services can be enabled with --profile analytics. Keep the
+  # default laptop stack focused on annotation and GPU inference.
+  cvat_clickhouse:
+    profiles: [analytics]
+  cvat_vector:
+    profiles: [analytics]
+  cvat_grafana:
+    profiles: [analytics]
+  cvat_worker_analytics_reports:
+    profiles: [analytics]
+  cvat_utils:
+    environment:
+      DJANGO_LOG_SERVER_HOST: ""
+  cvat_worker_import:
+    environment:
+      NUMPROCS: "1"
+      DJANGO_LOG_SERVER_HOST: ""
+  cvat_worker_export:
+    environment:
+      NUMPROCS: "1"
+      DJANGO_LOG_SERVER_HOST: ""
+  cvat_worker_webhooks:
+    environment:
+      DJANGO_LOG_SERVER_HOST: ""
+  cvat_worker_quality_reports:
+    environment:
+      DJANGO_LOG_SERVER_HOST: ""
+  cvat_ui:
+    image: prelabel/cvat-ui:2.20.0-3d
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+      args:
+        DISABLE_SOURCE_MAPS: "true"
+  cvat_server:
+    networks:
+      cvat:
+        aliases: [cvat-server]
+    environment:
+      CVAT_NUCLIO_DEFAULT_TIMEOUT: "600"
+      # Use the Docker network rather than resolving the host gateway; the
+      # latter can hang in getaddrinfo/netlink on this WSL installation.
+      CVAT_NUCLIO_INVOKE_METHOD: dashboard
+      CVAT_ANALYTICS: "0"
+      NUMPROCS: "1"
+      DJANGO_LOG_SERVER_HOST: ""
+    volumes:
+      - ./cvat/apps/lambda_manager/views.py:/home/django/cvat/apps/lambda_manager/views.py:ro
+      - ../../../deployment/cvat/prelabel3d.py:/home/django/cvat/apps/lambda_manager/prelabel3d.py:ro
+  cvat_worker_annotation:
+    environment:
+      CVAT_NUCLIO_DEFAULT_TIMEOUT: "600"
+      CVAT_NUCLIO_INVOKE_METHOD: dashboard
+      DJANGO_LOG_SERVER_HOST: ""
+    volumes:
+      - ./cvat/apps/lambda_manager/views.py:/home/django/cvat/apps/lambda_manager/views.py:ro
+      - ../../../deployment/cvat/prelabel3d.py:/home/django/cvat/apps/lambda_manager/prelabel3d.py:ro
+  prelabel:
+    image: prelabel/centerpoint:1.4.0-cu117
+    profiles: [tools]
+    build:
+      context: ../../..
+      dockerfile: deployment/Dockerfile.centerpoint
+      additional_contexts:
+        runtime_wheels: ../../../.local/wheelhouse
+    working_dir: /workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ../../..:/workspace
+    environment:
+      NUSCENES_ROOT: /workspace/data/nuscenes
+      CVAT_URL: http://cvat-server:8080
+      PYTHONPATH: /workspace/src
+    networks: [cvat]

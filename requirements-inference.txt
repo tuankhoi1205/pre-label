@@ -1,0 +1,11 @@
+# Install torch and mmcv first; see scripts/install_linux.sh.
+-r requirements-core.txt
+nuscenes-devkit==1.1.11
+mmengine==0.10.5
+mmdet==3.2.0
+mmdet3d==1.4.0
+numba==0.59.1
+llvmlite==0.42.0
+opencv-python==4.10.0.84
+matplotlib==3.5.3
+Shapely==1.8.5.post1

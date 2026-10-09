@@ -1,0 +1,1 @@
+{"task_id": 2, "processor_route": "Docker DNS", "http_status": 400, "handler_response": {"error": "Expected CVAT detector request containing a base64 PCD in 'image'"}, "seconds": 0.07, "shapes": 0, "requests": [], "real_inference": false}

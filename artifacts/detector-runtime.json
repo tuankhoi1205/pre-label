@@ -1,0 +1,24 @@
+{
+  "python": "3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]",
+  "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+  "cuda": "11.7",
+  "cuda_available": true,
+  "mmcv_cuda_voxelization": true,
+  "centerpoint_checkpoint_loaded": true,
+  "model": "CenterPoint",
+  "real_inference": false,
+  "purpose": "CUDA operator and model initialization only; no predictions/annotations",
+  "packages": {
+    "torch": "1.13.1+cu117",
+    "torchvision": "0.14.1+cu117",
+    "mmcv": "2.1.0",
+    "mmengine": "0.10.5",
+    "mmdet": "3.2.0",
+    "mmdet3d": "1.4.0",
+    "numpy": "1.26.4",
+    "scipy": "1.12.0",
+    "nuscenes-devkit": "1.1.11",
+    "matplotlib": "3.5.3",
+    "Shapely": "1.8.5.post1"
+  }
+}

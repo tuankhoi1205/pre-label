@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="8.351" timestamp="2026-10-08T05:04:46.630211+00:00" hostname="39131c4f25c6"><testcase classname="tests.test_dataset_detector" name="test_optional_native_multisweeps" time="8.149" /></testsuite></testsuites>

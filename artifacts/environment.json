@@ -1,0 +1,35 @@
+{
+  "os": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\khoik\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+  "packages": {
+    "numpy": "1.26.4",
+    "scipy": "1.12.0",
+    "PyYAML": "6.0.2",
+    "requests": "2.32.3",
+    "nuscenes-devkit": null,
+    "torch": null,
+    "mmcv": null,
+    "mmengine": null,
+    "mmdet": null,
+    "mmdet3d": null
+  },
+  "gpu": {
+    "available": true,
+    "exit_code": 0,
+    "output": "NVIDIA GeForce RTX 3050 Laptop GPU, 4096 MiB, 566.07"
+  },
+  "cuda_toolkit": {
+    "available": false
+  },
+  "docker": {
+    "available": false
+  },
+  "dataset_available": false,
+  "model_config_available": false,
+  "checkpoint_available": false,
+  "cvat_url_configured": false,
+  "cvat": {
+    "status": "not_checked"
+  }
+}

@@ -1,0 +1,39 @@
+metadata:
+  name: pth-prelabel-centerpoint
+  namespace: nuclio
+  annotations:
+    name: CenterPoint 3D (nuScenes)
+    version: "2"
+    type: detector
+    # deploy_function.py fills spec from the audited model class list.
+    spec: "[]"
+spec:
+  description: CenterPoint 3D cuboids for prepared nuScenes PCD tasks
+  runtime: python:3.10
+  handler: main:handler
+  eventTimeout: 600s
+  readinessTimeoutSeconds: 300
+  build:
+    image: prelabel/nuclio-centerpoint:1.4.0-cu117
+    baseImage: prelabel/centerpoint:1.4.0-cu117
+    noBaseImagesPull: true
+    directives:
+      preCopy:
+        - kind: WORKDIR
+          value: /opt/nuclio
+  triggers:
+    http:
+      kind: http
+      numWorkers: 1
+      workerAvailabilityTimeoutMilliseconds: 600000
+      attributes:
+        maxRequestBodySize: 45000000
+  resources:
+    limits:
+      nvidia.com/gpu: 1
+  platform:
+    attributes:
+      network: cvat_cvat
+      mountMode: volume
+      restartPolicy:
+        name: unless-stopped

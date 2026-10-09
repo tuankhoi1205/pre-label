@@ -1,0 +1,2 @@
+﻿sample_token,frame_id,class_name,prediction_id,ground_truth_id,iou3d
+SYNTHETIC_ONLY,0,car,synthetic:0,synthetic:0,0.8977275184551773

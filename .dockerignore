@@ -1,0 +1,13 @@
+.local
+.research
+.test-deps
+.test-tmp
+.venv
+.env
+data
+models
+runs
+artifacts
+__pycache__
+.pytest_cache
+.git

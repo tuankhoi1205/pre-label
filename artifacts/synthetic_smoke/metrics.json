@@ -1,0 +1,104 @@
+{
+  "source": "synthetic_only",
+  "real_inference": false,
+  "live_cvat": false,
+  "before": {
+    "sample_token": "SYNTHETIC_ONLY",
+    "frame_id": 0,
+    "prediction_id": "synthetic:0",
+    "class_name": "car",
+    "confidence": 0.8,
+    "center_xyz": [
+      8,
+      2,
+      1
+    ],
+    "size_lwh": [
+      4.6,
+      1.7,
+      1.5
+    ],
+    "quaternion_wxyz": [
+      0.9393727128473789,
+      0.0,
+      0.0,
+      0.34289780745545134
+    ],
+    "coordinate_frame": "lidar_sensor",
+    "model": "synthetic_geometry_fixture",
+    "checkpoint": "none",
+    "annotation_id": null,
+    "identity_source": "prediction"
+  },
+  "reviewed": {
+    "sample_token": "SYNTHETIC_ONLY",
+    "frame_id": 0,
+    "prediction_id": "synthetic:0",
+    "class_name": "car",
+    "confidence": 0.8,
+    "center_xyz": [
+      8.1,
+      2,
+      1
+    ],
+    "size_lwh": [
+      4.6,
+      1.7,
+      1.5
+    ],
+    "quaternion_wxyz": [
+      0.9393727128473789,
+      0.0,
+      0.0,
+      0.34289780745545134
+    ],
+    "coordinate_frame": "lidar_sensor",
+    "model": "synthetic_geometry_fixture",
+    "checkpoint": "none",
+    "annotation_id": 101,
+    "identity_source": "annotation_id"
+  },
+  "quality": {
+    "frames": 1,
+    "prediction_boxes": 1,
+    "ground_truth_boxes": 1,
+    "match_iou_threshold": 0.5,
+    "matching": "maximum_cardinality_then_maximum_total_iou_per_sample_and_class",
+    "matched_pairs": 1,
+    "extra_boxes": 0,
+    "missed_boxes": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "mean_matched_iou": 0.8977275184551773,
+    "per_class": {
+      "car": {
+        "matched_pairs": 1,
+        "extra_boxes": 0,
+        "missed_boxes": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "mean_matched_iou": 0.8977275184551773
+      }
+    },
+    "extra_prediction_ids": [],
+    "missed_ground_truth_ids": []
+  },
+  "edits": {
+    "status": "measured",
+    "initial_predictions": 1,
+    "unchanged": 0,
+    "edited": 1,
+    "deleted": 0,
+    "added": 0,
+    "unchanged_ratio": 0.0,
+    "edited_ratio": 1.0,
+    "deleted_ratio": 0.0,
+    "tolerances": {
+      "center_tolerance_m": 0.02,
+      "size_tolerance_m": 0.02,
+      "rotation_tolerance_rad": 0.01
+    },
+    "recovered_ids": 0
+  },
+  "annotation_time": "not_measured"
+}

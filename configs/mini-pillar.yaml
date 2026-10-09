@@ -1,0 +1,31 @@
+project_root: ..
+run_dir: runs/mini-centerpoint-pillar
+dataset:
+  root: ${NUSCENES_ROOT}
+  version: v1.0-mini
+  split: mini_val
+  scenes: []
+  max_frames: 20
+detector:
+  backend: mmdet3d_centerpoint
+  config: models/mmdetection3d/configs/centerpoint/centerpoint_pillar02_second_secfpn_head-circlenms_8xb4-cyclic-20e_nus-3d.py
+  checkpoint: models/centerpoint_pillar02.pth
+  device: cuda:0
+  classes: [car, truck, construction_vehicle, bus, trailer, barrier, motorcycle, bicycle, pedestrian, traffic_cone]
+  sweeps: 9
+  confidence: 0.35
+  class_thresholds: {pedestrian: 0.30, bicycle: 0.25, traffic_cone: 0.30}
+cvat:
+  expected_version: 2.20.0
+  task_name: nuScenes-mini-CenterPoint-pillar
+  task_id: null
+  poll_seconds: 2
+  timeout_seconds: 600
+  label_mapping: {}
+evaluation:
+  match_iou: 0.5
+  center_tolerance_m: 0.02
+  size_tolerance_m: 0.02
+  rotation_tolerance_rad: 0.01
+  min_lidar_points: 1
+  point_cloud_range: [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
