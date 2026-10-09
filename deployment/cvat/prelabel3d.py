@@ -112,14 +112,36 @@ def parse_shapes(annotations, labels, frame):
     return result
 
 
+def ensure_metadata(labels, mapping, attribute_model):
+    """Add reserved provenance attributes when a task was created in the UI."""
+    for label in labels.values():
+        if label['type'] not in ('cuboid', 'any'):
+            continue
+        for name in ATTRIBUTES:
+            if name not in label['attributes']:
+                attr, _ = attribute_model.objects.get_or_create(label_id=label['id'], name=name,
+                    defaults={'input_type': 'text', 'mutable': False, 'default_value': '', 'values': ''})
+                if attr.input_type != 'text' or attr.mutable:
+                    raise ValueError(f'CenterPoint reserved attribute {name} must be immutable text')
+                label['attributes'][name] = attr.id
+    for entry in (mapping or {}).values():
+        label = labels.get(entry['name'])
+        if label and label['type'] in ('cuboid', 'any'):
+            entry.setdefault('attributes', {}).update({name: name for name in ATTRIBUTES})
+
+
 def annotate(function, db_task, labels, mapping, frame_set, update_progress, db_job=None):
     from cvat.apps.dataset_manager import task as dm_task
     from cvat.apps.engine.serializers import LabeledDataSerializer
+    from cvat.apps.engine.models import AttributeSpec
+    from django.db import transaction
     if db_task.dimension != "3d":
         raise ValueError("CenterPoint requires a 3D PCD task")
+    with transaction.atomic():
+        ensure_metadata(labels, mapping, AttributeSpec)
     for label in labels.values():
         if label["type"] not in ("cuboid", "any") or any(name not in label["attributes"] for name in ATTRIBUTES):
-            raise ValueError("Use CenterPoint labels with metadata attributes; create the task using prelabel create-task")
+            raise ValueError("CenterPoint requires Cuboid/Any labels")
     specs = {label["attributes"]["prediction_id"] for label in labels.values()}
     journal = Journal(Path(db_task.data.get_data_dirname()) / "prelabel3d" / "centerpoint.json")
 

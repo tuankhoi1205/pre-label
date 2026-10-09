@@ -1,0 +1,130 @@
+{
+  "task_id": 4,
+  "frames": 10,
+  "context_images": 60,
+  "validated_frames": [
+    {
+      "frame": 0,
+      "path": "pcd/20.pcd",
+      "pcd_sha256": "168259069bf8eac86b13e33e05a5b7d5f95105e96b115fee2a029c3b943a5c23",
+      "ready": true,
+      "sample_token": "0e837c21890a4515874247ceb3dbf5c3",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "0badff435f01a174",
+      "inference_started": false
+    },
+    {
+      "frame": 1,
+      "path": "pcd/21.pcd",
+      "pcd_sha256": "24521dd6246152bb6baa7f2bb20030937afcd9accfd47acf7ce20b6a3796db98",
+      "ready": true,
+      "sample_token": "f5f955d2d7594fb4b18ef615b421c98e",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "92efe878eabd1868",
+      "inference_started": false
+    },
+    {
+      "frame": 2,
+      "path": "pcd/22.pcd",
+      "pcd_sha256": "491ab014c26efd8b9166201aa561dcf134a8465ffebf1c074bf79a4ebf492e0b",
+      "ready": true,
+      "sample_token": "6cb024831cce4b6e8acf85afb7cece6e",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "1496f56f91ae483f",
+      "inference_started": false
+    },
+    {
+      "frame": 3,
+      "path": "pcd/23.pcd",
+      "pcd_sha256": "a4673fbe5e64a16b1f000e9f2973d31eb0cfe5d09f3d43e1414a36c2f7303f96",
+      "ready": true,
+      "sample_token": "273c930b3f384bd58b2bbae02fe81d1e",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "aa86847fa4d69d75",
+      "inference_started": false
+    },
+    {
+      "frame": 4,
+      "path": "pcd/24.pcd",
+      "pcd_sha256": "d41e414546305dee5c4256e17ac744030086ee8b095a3feac258c246b2358938",
+      "ready": true,
+      "sample_token": "a84f43c4ef52461d940a6c7d0768b86f",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "cf8cf8a3e4849a88",
+      "inference_started": false
+    },
+    {
+      "frame": 5,
+      "path": "pcd/25.pcd",
+      "pcd_sha256": "199a7c0e7321d7247e2cd84c7a25d5bac3b4fdb6221bd66a96d93b3aee903f0c",
+      "ready": true,
+      "sample_token": "8d7dcd1533704f5882a5afcb65509ed5",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "a9d3296c26d4973d",
+      "inference_started": false
+    },
+    {
+      "frame": 6,
+      "path": "pcd/26.pcd",
+      "pcd_sha256": "b410692c07b5fdad4e18c1a48e65c32dc7baa15ecdd57ee0fad2e35f1df0f00b",
+      "ready": true,
+      "sample_token": "f90292e4cdf647e1a8842baabdaafcec",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "25f2228f46b71a4d",
+      "inference_started": false
+    },
+    {
+      "frame": 7,
+      "path": "pcd/27.pcd",
+      "pcd_sha256": "64e3d4cb7946e360923d979e650d5d75e4145a886939d23acb3bd7e656f4e5fd",
+      "ready": true,
+      "sample_token": "98fa81992fb04e799c329eca220e7164",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "77c8cb8ebd6a0a87",
+      "inference_started": false
+    },
+    {
+      "frame": 8,
+      "path": "pcd/28.pcd",
+      "pcd_sha256": "8bd0bf1246707a61124ed6d0813aef0b4d2f5a1de6cf4060d188f28284721329",
+      "ready": true,
+      "sample_token": "49dfd2f2fef447cc9b8dec3e17c1c919",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "0e60bec00eefd823",
+      "inference_started": false
+    },
+    {
+      "frame": 9,
+      "path": "pcd/29.pcd",
+      "pcd_sha256": "fd67b2af7dc6e80e8224665af1fcd1db6e6aafcea6d4dafe557b058b32c17c3f",
+      "ready": true,
+      "sample_token": "c18d3bcc9297454ba52112c079cb756e",
+      "scene": "scene-1094",
+      "sweeps": 9,
+      "run_id": "c56fd334066c8cf8",
+      "inference_started": false
+    }
+  ],
+  "inference_started": false,
+  "annotations_unchanged": true,
+  "annotation_counts": {
+    "2": 1123,
+    "4": 0
+  },
+  "annotation_sha256": {
+    "2": "761ef34ff2d2488f00b5370e7ccb2f848a487cd6706273093e478c4bafeb60de",
+    "4": "07d3abd8bdfc9210410cfd551dca2bb1cfca2141e2b23ec5fb0a6897c4b584b2"
+  },
+  "native_cvat_pcd_bytes_verified": true,
+  "native_gateway_all_frames_ready": true,
+  "metadata_mapping_verified": true
+}

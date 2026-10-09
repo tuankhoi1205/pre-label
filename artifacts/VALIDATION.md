@@ -1,5 +1,11 @@
 # Bằng chứng kiểm chứng — 08/10/2026
 
+## Cập nhật 09/10/2026: task upload trực tiếp
+
+Function local đã cập nhật để tự khớp binary XYZ/XYZI PCD với raw nuScenes, chuẩn bị calibration/sweeps và dùng chung một model GPU. Task #4 `test` gồm 10 PCD `20.pcd`–`29.pcd` và 60 ảnh context. Cả 10 input qua native CVAT provider/gateway đều trả ready/HTTP 200, khớp scene-1094 và có 9 prior sweeps. Đây là kiểm tra input bằng `validate_only`: không chạy detector hoặc tạo box; người dùng vẫn nhấn Annotate. Task #4 còn 0 box; Task #2 giữ 1.123 box và SHA256 annotation ban đầu.
+
+Bằng chứng: [task4-auto-input-check.json](task4-auto-input-check.json). Bộ test đầy đủ đạt 103 passed/2 skipped; sau sửa kiểm tra integrity và ghi PCD atomic, nhóm liên quan đạt 48 passed/1 skipped: [full tests](auto-upload-test-results.xml), [final checks](auto-upload-final-test-results.xml). Các lượt skipped yêu cầu môi trường live/detector riêng. README và hướng dẫn CVAT đã ghi luồng upload trực tiếp và giới hạn format/dataset.
+
 ## Cập nhật: inference thật, camera và hướng cuboid
 
 Người dùng đã nhấn Annotate: 20 frame thật hoàn tất trong khoảng 45,5 giây, Task #2 có 1.123 cuboid. 120 ảnh camera được gắn theo đúng sample token; provider CVAT trả 6 JPEG/frame cho đủ 20 frame và SHA256 annotation trước/sau không đổi. UI có checkbox Cuboid orientation và sáu camera context. Webpack build thành công, 41 test context/REST/UI/journal đạt. Bằng chứng: [real-inference-complete.json](real-inference-complete.json), [context-orientation-test-results.xml](context-orientation-test-results.xml), [ảnh giao diện](cvat-camera-orientation.png).

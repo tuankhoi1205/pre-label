@@ -1,5 +1,11 @@
 import json
 import os
+from pathlib import Path
+import sys
+
+# Use the versioned project source mounted alongside dataset/model files.
+if Path('/workspace/src/prelabel').is_dir():
+    sys.path.insert(0, '/workspace/src')
 
 from prelabel.config import load_config
 from prelabel.serverless import CenterPointFunction
@@ -19,7 +25,8 @@ def handler(context, event):
         payload = json.loads(event.body) if isinstance(event.body, (str, bytes, bytearray)) else event.body
         if context.user_data.model is None:
             context.user_data.model = CenterPointFunction(context.user_data.cfg)
-        result = context.user_data.model.predict(payload)
+        result = (context.user_data.model.validate(payload) if isinstance(payload, dict)
+                  and payload.get('validate_only') is True else context.user_data.model.predict(payload))
         return context.Response(body=json.dumps(result, allow_nan=False),
             content_type="application/json", status_code=200)
     except (ValueError, json.JSONDecodeError) as exc:

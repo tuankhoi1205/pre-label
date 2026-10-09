@@ -63,6 +63,23 @@ ROUTING_PATCHES = {
     ],
 }
 
+ERROR_PATCHES = {
+    VIEWS_FILE: [
+        ("                reply.raise_for_status()\n                return reply.json()", """                # PRELABEL_3D_ERROR: retain the processor's actionable input error.
+                if reply.status_code >= 400:
+                    try:
+                        body = reply.json()
+                        detail = body.get('error', '') if isinstance(body, dict) else ''
+                    except ValueError:
+                        detail = ''
+                    raise requests.HTTPError(
+                        f'CenterPoint HTTP {reply.status_code}: {str(detail)[:1000]}',
+                        response=reply)
+                reply.raise_for_status()
+                return reply.json()"""),
+    ],
+}
+
 
 def patch(root):
     root = Path(root).resolve()
@@ -82,10 +99,20 @@ def patch(root):
                     raise ValueError(f"CVAT source differs from v2.20.0 at {name}; no files changed")
                 text = text.replace(old, new)
         for old, new in ROUTING_PATCHES.get(name, []):
-            if new in text:
+            # Recognize the original routing patch after its error handler upgrade.
+            routing_text = text
+            for error_old, error_new in ERROR_PATCHES.get(name, []):
+                routing_text = routing_text.replace(error_new, error_old)
+            if new in routing_text:
                 continue
             if text.count(old) != 1:
                 raise ValueError(f"CVAT source differs from v2.20.0 at {name}; no files changed")
+            text = text.replace(old, new)
+        for old, new in ERROR_PATCHES.get(name, []):
+            if new in text:
+                continue
+            if text.count(old) != 1:
+                raise ValueError(f'CVAT error handler source differs from v2.20.0 at {name}; no files changed')
             text = text.replace(old, new)
         if text != original:
             changes.append((path, text))

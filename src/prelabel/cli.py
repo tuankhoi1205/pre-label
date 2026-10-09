@@ -17,6 +17,8 @@ def build_parser():
     commands.add_parser("fetch-model", help="Download the pinned official config repository and checkpoint")
     prep = commands.add_parser("prepare", help="Prepare CVAT PCD files and an immutable frame manifest")
     prep.add_argument("--limit", type=int, help="Use 1 for the initial smoke run; use a separate run_dir for batch")
+    manual = commands.add_parser("prepare-upload", help="Match uploaded binary XYZ/XYZI PCDs to nuScenes and prepare their sweeps")
+    manual.add_argument("--pcd-dir", required=True, help="Directory containing the exact PCDs uploaded to CVAT")
     commands.add_parser("infer", help="Real CenterPoint inference with resumable per-frame records")
     commands.add_parser("create-task", help="Create a LiDAR/camera-context CVAT task; run inference from the Annotate button")
     up = commands.add_parser("upload", help="Create/reuse CVAT task and append editable pre-label cuboids")
@@ -63,6 +65,11 @@ def main(argv=None):
                 from .detector import infer
                 boxes = infer(cfg)
                 result = {"boxes": len(boxes), "predictions": str(run / "predictions")}
+            elif args.command == "prepare-upload":
+                from .dataset import prepare
+                manifest = prepare(cfg, pcd_dir=Path(args.pcd_dir))
+                result = {"frames": len(manifest["frames"]), "manifest": str(run / "manifest.json"),
+                          "next": "Deploy this run, then click Annotate on the matching CVAT task"}
             elif args.command == "create-task":
                 from .ui_task import create_task
                 state = create_task(cfg)

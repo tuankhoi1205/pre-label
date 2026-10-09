@@ -83,16 +83,40 @@ def selected_samples(nusc, cfg, limit=None):
     return result
 
 
-def prepare(cfg, limit=None):
+def prepare(cfg, limit=None, pcd_dir=None):
     start = time.perf_counter()
     root, run = dataset_root(cfg), Path(cfg["run_dir"])
     nusc = open_nuscenes(cfg)
-    selection = selected_samples(nusc, cfg, limit)
+    uploaded = None
+    if pcd_dir is None:
+        selection = selected_samples(nusc, cfg, limit)
+    else:
+        if limit is not None:
+            raise ValueError('Uploaded PCD preparation uses all files in --pcd-dir')
+        # Validate version, split and requested scenes using the normal selection rules.
+        selected_samples(nusc, cfg, 1)
+        from nuscenes.utils.splits import create_splits_scenes
+        from .uploaded import match_uploaded_pcds
+        allowed = set(create_splits_scenes()[cfg['dataset']['split']])
+        if cfg['dataset'].get('scenes'):
+            allowed &= set(cfg['dataset']['scenes'])
+        uploaded = match_uploaded_pcds(nusc, root, allowed, pcd_dir)
+        selection = [(scene, sample) for scene, sample, _, _ in uploaded]
+    return prepare_selection(cfg, nusc, selection, uploaded, start)
+
+
+def prepare_selection(cfg, nusc, selection, uploaded=None, start=None):
+    """Prepare verified selections, including PCDs resolved by the UI function."""
+    start = time.perf_counter() if start is None else start
+    root, run = dataset_root(cfg), Path(cfg['run_dir'])
     selection_spec = {"version": cfg["dataset"]["version"], "split": cfg["dataset"]["split"],
                       "tokens": [s["token"] for _, s in selection], "sweeps": cfg["detector"]["sweeps"]}
+    if uploaded is not None:
+        selection_spec['uploaded_pcds'] = [{'name': path.name, 'sha256': sha}
+                                         for _, _, path, sha in uploaded]
     manifest_path = run / "manifest.json"
     if manifest_path.exists():
-        old = read_json(manifest_path)
+        old = load_manifest(run)
         if old["selection"] != selection_spec:
             raise ValueError("Selection changed. Use a new run_dir so CVAT mapping stays immutable.")
         validate_manifest(old, run, root, check_sweeps=True)
@@ -104,8 +128,23 @@ def prepare(cfg, limit=None):
         global_from_lidar = global_from_sensor(nusc, sd)
         source = root / sd["filename"]
         points = read_lidar(source)
-        pcd = f"pcd/{index:06d}_{sample['token']}.pcd"
-        write_pcd(run / pcd, points)
+        if uploaded is None:
+            pcd = f"pcd/{index:06d}_{sample['token']}.pcd"
+            write_pcd(run / pcd, points)
+        else:
+            import shutil
+            path, sha = uploaded[index][2:]
+            if file_digest(path) != sha:
+                raise ValueError('Uploaded PCD changed during preparation')
+            pcd = f'pcd/{path.name}'
+            destination = run / pcd
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if destination.exists() and file_digest(destination) != sha:
+                raise ValueError('Run already contains a different PCD; use a new run_dir')
+            if destination.resolve() != path.resolve():
+                shutil.copyfile(path, destination)
+            if file_digest(destination) != sha:
+                raise ValueError('Copied PCD differs from the matched upload')
         sweeps = []
         previous = sd["prev"]
         while previous and len(sweeps) < cfg["detector"]["sweeps"]:

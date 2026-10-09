@@ -6,12 +6,13 @@ and calibrated sweeps, never the XYZ-only preview as a substitute.
 """
 import base64
 import binascii
+from copy import deepcopy
 import hashlib
 from pathlib import Path
 import time
 
-from .dataset import validate_manifest
-from .detector import initialize_inference, MMDet3DCenterPoint
+from .dataset import validate_manifest, prepare_selection
+from .detector import bind_inference_state, initialize_inference, MMDet3DCenterPoint
 from .geometry import cvat_points
 from .io import read_json, run_lock, write_json
 from .schema import Cuboid
@@ -30,8 +31,10 @@ class CenterPointFunction:
             self.by_pcd[frame["pcd_sha256"]] = frame
         self.adapter_factory = adapter_factory
         self.adapter = None
+        self.resolver = None
+        self.uploads = {}
 
-    def predict(self, payload):
+    def resolve_input(self, payload):
         if not isinstance(payload, dict) or not isinstance(payload.get("image"), str):
             raise ValueError("Expected CVAT detector request containing a base64 PCD in 'image'")
         if len(payload["image"]) > 44_000_000:
@@ -42,32 +45,74 @@ class CenterPointFunction:
             raise ValueError("Invalid base64 PCD") from exc
         frame = self.by_pcd.get(hashlib.sha256(pcd).hexdigest())
         if frame is None:
-            raise ValueError("PCD is not in the prepared manifest. Upload this run's exact PCD files; arbitrary PCDs lack nuScenes intensity/sweeps.")
+            return self._resolve_upload(pcd)
+        return self.run, frame, self.state
+
+    def _resolve_upload(self, pcd):
+        from .uploaded import NuScenesPCDResolver, parse_uploaded_pcd
+
+        # Reject malformed requests before loading/indexing the dataset.
+        _, sha = parse_uploaded_pcd(pcd)
+        if sha in self.uploads:
+            return self.uploads[sha]
+        if self.resolver is None:
+            self.resolver = NuScenesPCDResolver(self.cfg)
+        scene, sample, split, sha = self.resolver.resolve(pcd)
+        cfg = deepcopy(self.cfg)
+        run = self.run / 'uploads' / sha
+        cfg['run_dir'] = str(run)
+        cfg['dataset'].update(split=split, scenes=[scene['name']], max_frames=1)
+        with run_lock(run):
+            path = run / 'pcd' / 'upload.pcd'
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if path.exists():
+                if path.read_bytes() != pcd:
+                    raise ValueError('Stored upload content changed')
+            else:
+                temporary = path.with_suffix('.pcd.tmp')
+                temporary.write_bytes(pcd)
+                temporary.replace(path)
+            manifest = prepare_selection(cfg, self.resolver.nusc, [(scene, sample)],
+                                         [(scene, sample, path, sha)])
+            state = bind_inference_state(run, manifest, self.detector, self.state['config_tree_sha256'])
+        result = run, manifest['frames'][0], state
+        self.uploads[sha] = result
+        return result
+
+    def validate(self, payload):
+        run, frame, state = self.resolve_input(payload)
+        with run_lock(run):
+            validate_manifest({'frames': [frame]}, run, self.root, check_sweeps=True)
+        return {'ready': True, 'sample_token': frame['sample_token'], 'scene': frame.get('scene'),
+                'sweeps': len(frame['sweeps']), 'run_id': state['run_id'], 'inference_started': False}
+
+    def predict(self, payload):
+        run, frame, state = self.resolve_input(payload)
         threshold = payload.get("threshold")
         if threshold is not None and (not isinstance(threshold, (int, float)) or not 0 <= threshold <= 1):
             raise ValueError("Threshold must be in [0,1]")
-        path = self.run / "predictions" / f"{frame['frame_id']:06d}.json"
-        with run_lock(self.run):
+        path = run / "predictions" / f"{frame['frame_id']:06d}.json"
+        with run_lock(run):
             # Detect modified original inputs even when using a cached prediction.
-            validate_manifest({"frames": [frame]}, self.run, self.root, check_sweeps=True)
+            validate_manifest({"frames": [frame]}, run, self.root, check_sweeps=True)
             if path.exists():
                 record = read_json(path)
-                if (record["inference_signature"] != self.state["signature"] or
+                if (record["inference_signature"] != state["signature"] or
                         record["sample_token"] != frame["sample_token"]):
                     raise ValueError("Cached prediction provenance mismatch")
                 boxes = [Cuboid.from_dict(b) for b in record["boxes"]]
             else:
                 if self.adapter is None:
-                    self.adapter = self.adapter_factory(self.detector, self.state["run_id"])
-                    write_json(self.run / "resolved_detector_config.json", {"config": self.adapter.resolved_config})
+                    self.adapter = self.adapter_factory(self.detector, state["run_id"])
+                write_json(run / "resolved_detector_config.json", {"config": self.adapter.resolved_config})
                 start = time.perf_counter()
                 try:
-                    raw, boxes = self.adapter.predict(frame, self.root)
+                    raw, boxes = self.adapter.predict(frame, self.root, run_id=state['run_id'])
                 except RuntimeError as exc:
                     if "out of memory" in str(exc).lower():
                         raise RuntimeError("CenterPoint CUDA out of memory; GPU 4 GB may be insufficient. Use a GPU with enough VRAM or a separate pillar run.") from exc
                     raise
-                write_json(path, {"inference_signature": self.state["signature"],
+                write_json(path, {"inference_signature": state["signature"],
                     "sample_token": frame["sample_token"], "frame_id": frame["frame_id"],
                     "raw": raw, "boxes": [b.to_dict() for b in boxes],
                     "frame_seconds": time.perf_counter() - start, "source": "real_detector"})

@@ -1,5 +1,6 @@
 import base64
 from copy import deepcopy
+from dataclasses import replace
 import importlib.util
 from pathlib import Path
 import pytest
@@ -59,7 +60,8 @@ def function_fixture(run_fixture, monkeypatch):
     run = Path(cfg['run_dir'])
     write_pcd(run / manifest['frames'][1]['pcd_file'], np.array([[4, 5, 6, 100, 5]], float))
     manifest['frames'][1]['pcd_sha256'] = file_digest(run / manifest['frames'][1]['pcd_file'])
-    state = {'run_id': 'synthetic-ui-run', 'signature': 'synthetic-ui-signature'}
+    state = {'run_id': 'synthetic-ui-run', 'signature': 'synthetic-ui-signature',
+             'config_tree_sha256': 'synthetic-config-tree'}
     monkeypatch.setattr(serverless, 'initialize_inference', lambda c: (manifest, run, {}, state))
     monkeypatch.setattr(serverless, 'validate_manifest', lambda *a, **kw: None)
     loads, calls = [], []
@@ -68,9 +70,11 @@ def function_fixture(run_fixture, monkeypatch):
         resolved_config = 'synthetic test fixture'
         def __init__(self, d, rid):
             loads.append(rid)
-        def predict(self, frame, root):
+        def predict(self, frame, root, *, run_id=None):
             calls.append(frame['frame_id'])
-            return {'forward_seconds': 0}, [boxes[frame['frame_id']]]
+            prediction = replace(boxes[frame['frame_id']], sample_token=frame['sample_token'],
+                                 prediction_id=f"{run_id}:{frame['sample_token']}:0")
+            return {'forward_seconds': 0}, [prediction]
 
     for p in (run / 'predictions').glob('*.json'):
         p.unlink()
@@ -118,6 +122,58 @@ def test_cached_provenance_is_verified(function_fixture):
     write_json(path, record)
     with pytest.raises(ValueError, match='provenance'):
         function.predict(payloads[0])
+
+
+def test_upload_auto_preparation_reuses_one_model_and_preserves_base_cache(function_fixture, tmp_path, monkeypatch):
+    import sys
+    import numpy as np
+    from types import SimpleNamespace
+    from prelabel import dataset
+
+    function, payloads, loads, calls, _ = function_fixture
+    root = tmp_path / 'raw'
+    root.mkdir()
+    points = np.array([[7, 8, 9, 100, 5]], dtype='<f4')
+    points.tofile(root / 'key.bin')
+    scene = {'token': 'scene', 'name': 'scene-upload'}
+    sample = {'token': 'sample-upload', 'scene_token': 'scene', 'data': {'LIDAR_TOP': 'lidar'}}
+    sd = {'token': 'lidar', 'filename': 'key.bin', 'is_key_frame': True, 'timestamp': 1000000,
+          'prev': '', 'calibrated_sensor_token': 'cal', 'ego_pose_token': 'ego'}
+    records = {('sample_data', 'lidar'): sd,
+               ('calibrated_sensor', 'cal'): {'translation': [0, 0, 0], 'rotation': [1, 0, 0, 0]},
+               ('ego_pose', 'ego'): {'translation': [0, 0, 0], 'rotation': [1, 0, 0, 0]}}
+    nusc = SimpleNamespace(scene=[scene], sample=[sample], get=lambda table, token: records[table, token])
+    monkeypatch.setattr(dataset, 'open_nuscenes', lambda cfg: nusc)
+    monkeypatch.setitem(sys.modules, 'nuscenes.utils.splits', SimpleNamespace(create_splits_scenes=lambda: {
+        'mini_val': [], 'mini_train': ['scene-upload']}))
+    function.cfg['dataset'] = {'root': str(root), 'version': 'v1.0-mini', 'split': 'mini_val'}
+    function.cfg['detector']['sweeps'] = 9
+    function.root = root
+    upload = tmp_path / 'arbitrary-name.pcd'
+    write_pcd(upload, points)
+    payload = {'image': base64.b64encode(upload.read_bytes()).decode()}
+    validated = function.validate(payload)
+    assert validated['ready'] and validated['inference_started'] is False and not loads
+    assert validated['sample_token'] == 'sample-upload'
+    # An uploaded train scene is resolved even when the initial demo used mini_val.
+    auto_run, frame, state = function.resolve_input(payload)
+    assert read_json(auto_run / 'manifest.json')['selection']['split'] == 'mini_train'
+    assert (auto_run / frame['pcd_file']).read_bytes() == upload.read_bytes()
+    base = function.predict(payloads[0])
+    result = function.predict(payload)
+    assert len(loads) == 1 and calls == [0, 0]
+    assert next(a['value'] for a in result[0]['attributes'] if a['name'] == 'prediction_id').startswith(
+        state['run_id'] + ':sample-upload:')
+    assert function.predict(payload) == result and function.predict(payloads[0]) == base
+    assert calls == [0, 0]
+    points[0, 0] += 1
+    points.tofile(root / 'key.bin')
+    monkeypatch.undo()
+    # Restore the real validator after the fixture's mock, and reject stale raw inputs.
+    from prelabel import serverless
+    monkeypatch.setattr(serverless, 'validate_manifest', dataset.validate_manifest)
+    with pytest.raises(ValueError, match='LiDAR input changed'):
+        function.predict(payload)
 
 
 def test_create_ui_task_does_not_infer_and_resume_preserves_annotations(run_fixture, fake_cvat):
@@ -297,3 +353,43 @@ def test_partial_patch_rejected_before_other_file_writes(tmp_path):
     with pytest.raises(ValueError, match='Partially'):
         patcher.patch(tmp_path)
     assert (tmp_path / patcher.UI_FILE).read_text() == original
+
+
+def test_processor_input_error_reaches_cvat_instead_of_generic_400():
+    from contextlib import nullcontext
+    from types import SimpleNamespace
+    import requests
+
+    response = SimpleNamespace(status_code=400, json=lambda: {'error': 'PCD is not in the prepared manifest'})
+    session = SimpleNamespace(post=lambda *args, **kwargs: response)
+    source = patcher.ROUTING_PATCHES[patcher.VIEWS_FILE][0][1]
+    for old, new in patcher.ERROR_PATCHES[patcher.VIEWS_FILE]:
+        source = source.replace(old, new)
+    source = source.split('        invoke_method = {')[0]
+    namespace = {'os': SimpleNamespace(path=SimpleNamespace(exists=lambda path: True)),
+                 'make_requests_session': lambda: nullcontext(session),
+                 'settings': SimpleNamespace(NUCLIO={'DEFAULT_TIMEOUT': 600}), 'requests': requests}
+    exec('class Gateway:\n' + source, namespace)
+    with pytest.raises(requests.HTTPError, match='PCD is not in the prepared manifest') as caught:
+        namespace['Gateway']().invoke(SimpleNamespace(id='pth-prelabel-centerpoint'), {})
+    assert caught.value.response is response
+
+
+def test_ui_task_without_metadata_gets_provenance_and_mapping():
+    from types import SimpleNamespace
+    created = {}
+
+    def get_or_create(label_id, name, defaults):
+        key = label_id, name
+        if key not in created:
+            created[key] = SimpleNamespace(id=len(created) + 100, **defaults)
+        return created[key], True
+
+    attributes = SimpleNamespace(objects=SimpleNamespace(get_or_create=get_or_create))
+    labels = {'Car': {'id': 5, 'type': 'cuboid', 'attributes': {}}}
+    mapping = {'car': {'name': 'Car', 'attributes': {}}}
+    backend.ensure_metadata(labels, mapping, attributes)
+    assert set(labels['Car']['attributes']) == set(backend.ATTRIBUTES)
+    assert mapping['car']['attributes'] == {name: name for name in backend.ATTRIBUTES}
+    backend.ensure_metadata(labels, mapping, attributes)
+    assert len(created) == 5

@@ -14,7 +14,7 @@ LOG = logging.getLogger(__name__)
 
 class DetectorAdapter(ABC):
     @abstractmethod
-    def predict(self, frame, root):
+    def predict(self, frame, root, *, run_id=None):
         """Return (raw JSON, list[Cuboid]); boxes in the keyframe LiDAR frame."""
 
 
@@ -99,7 +99,7 @@ class MMDet3DCenterPoint(DetectorAdapter):
         self.box_type, self.box_mode = get_box_type("LiDAR")
         self.cfg, self.run_id = cfg, run_id
 
-    def predict(self, frame, root):
+    def predict(self, frame, root, *, run_id=None):
         import torch
         from mmengine.dataset import pseudo_collate
         data = self.pipeline(model_input(frame, root, self.box_type, self.box_mode))
@@ -119,7 +119,7 @@ class MMDet3DCenterPoint(DetectorAdapter):
                "input_points": int(data["inputs"]["points"].shape[0]), "prior_sweeps": len(frame["sweeps"])}
         normalized = normalize_predictions(frame, raw, self.cfg["classes"], self.cfg.get("class_thresholds", {}),
                                            self.cfg["confidence"], "CenterPoint-MMDetection3D-1.4.0",
-                                           self.cfg["checkpoint_sha256"], self.run_id)
+                                           self.cfg["checkpoint_sha256"], run_id or self.run_id)
         return raw, normalized
 
 
@@ -159,13 +159,20 @@ def initialize_inference(cfg):
     # Hash the whole official config tree so inherited config changes invalidate resume.
     config_dir = Path(d["config"]).parent.parent
     tree_hash = digest({str(p.relative_to(config_dir)): file_digest(p) for p in sorted(config_dir.rglob("*.py"))})
+    state = bind_inference_state(run, manifest, d, tree_hash)
+    return manifest, root, d, state
+
+
+def bind_inference_state(run, manifest, d, tree_hash):
+    """Bind another verified manifest to the already validated model profile."""
+    run = Path(run)
     signature = digest({"manifest": manifest["signature"], "detector": {k: v for k, v in d.items() if k not in ("config", "checkpoint")}, "config_tree": tree_hash})
     state_path = run / "inference_state.json"
     state = {"signature": signature, "run_id": signature[:16], "manifest_signature": manifest["signature"], "detector": d, "config_tree_sha256": tree_hash}
     if state_path.exists() and read_json(state_path)["signature"] != signature:
         raise ValueError("Detector configuration/input changed. Use a new run_dir.")
     write_json(state_path, state)
-    return manifest, root, d, state
+    return state
 
 
 def infer(cfg):

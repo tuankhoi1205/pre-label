@@ -4,6 +4,8 @@ Pipeline Python cho **nuScenes LiDAR → CenterPoint pretrained → cuboid chu�
 
 Chạy trực tiếp từ **Tasks → Actions → Automatic annotation → CenterPoint 3D (nuScenes) → Annotate** trên CVAT Docker local. Task mới có LiDAR và sáu ảnh camera theo từng sample nuScenes. Giao diện bổ sung **Appearance → Cuboid orientation** để hiện trục X đỏ, Y xanh lá, Z xanh dương; +X là hướng đầu box theo yaw của detector.
 
+Bạn cũng có thể tự tạo task trên giao diện, upload ZIP chứa binary float32 XYZ/XYZI PCD cùng ảnh context, rồi nhấn **Annotate**. Function tự nhận diện PCD nuScenes bằng nội dung và chuẩn bị calibration/sweeps trong nền; không phải chạy prepare cho mỗi task. Máy chạy model cần giữ raw nuScenes, metadata và sweeps trong `data/nuscenes`. PCD đã lọc/đổi tọa độ hoặc từ dataset khác chưa được adapter này hỗ trợ. Xem [luồng upload trực tiếp](docs/CVAT_BUTTON.md).
+
 **Đã chạy thật:** ngày 08/10/2026, người dùng nhấn Annotate cho 20 frame nuScenes mini trên RTX 3050 Laptop 4 GB; request hoàn tất trong khoảng 45,5 giây và Task #2 có 1.123 cuboid. Đã bổ sung 120 ảnh camera, kiểm tra provider CVAT cho đủ 20 frame và xác nhận annotation không thay đổi. Peak VRAM, chất lượng sau review và thời gian thao tác annotator chưa được đo. Xem [bằng chứng kiểm chứng](artifacts/VALIDATION.md). Số liệu trong `artifacts/synthetic_smoke/` là dữ liệu tổng hợp.
 
 Repo chỉ chứa source, cấu hình, tài liệu và bằng chứng nhỏ. **Dataset, checkpoint, source CVAT tải về, môi trường Python, prediction/run và `.env` không được commit.** Người clone repo tải chúng theo hướng dẫn bên dưới; `.env.example` chỉ chứa mẫu cấu hình.
@@ -153,6 +155,7 @@ Export đọc journal và annotation từ CVAT, giữ liên kết prediction/ID 
 | Task có LiDAR nhưng không có camera | Task tạo trước khi bổ sung context cần gắn camera theo [hướng dẫn CVAT](docs/CVAT_BUTTON.md); task mới từ `create-task` tự có camera |
 | Không thấy `Cuboid orientation` | Chạy `local.ps1 Start` để patch/build UI, rồi tải lại trang; chỉ hiển thị trong workspace 3D |
 | Dataset/config/checkpoint thiếu | Kiểm tra cấu trúc giải nén, mount `data/nuscenes`, và hoàn tất `fetch-model` |
+| `400` khi Annotate task tự upload | Bản cập nhật tự nhận diện binary XYZ/XYZI của nuScenes; deploy lại function nếu đang dùng bản cũ. Nếu lỗi nói PCD không khớp, kiểm tra raw dataset và giữ nguyên tọa độ/thứ tự điểm/intensity |
 | CUDA out of memory | Đóng process dùng GPU khác; thử run mới một frame. Không tự giảm sweeps hay đổi checkpoint của run đã có. Peak VRAM cần kiểm tra trên từng máy |
 | Docker/WSL unresponsive hoặc request treo sau reboot | Khởi động lại WSL/Windows theo thông báo Docker, mở Docker Desktop rồi chạy `deployment/recover-prelabel.ps1`; không xóa volumes/journal |
 | Đổi model/config/threshold/frame selection | Dùng **run/task mới** và deploy function cho run đó; không ghi đè run cũ |
